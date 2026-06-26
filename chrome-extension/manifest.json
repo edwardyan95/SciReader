@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "SciReader Capture",
+  "version": "0.1.4",
+  "description": "Send an authenticated article snapshot to the local SciReader app.",
+  "permissions": ["activeTab", "downloads", "scripting"],
+  "host_permissions": [
+    "https://www.cell.com/*",
+    "https://ars.els-cdn.com/*",
+    "https://www.nature.com/*",
+    "https://media.springernature.com/*",
+    "https://www.science.org/*",
+    "https://www.science.org/doi/*",
+    "http://127.0.0.1:4174/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Capture for SciReader"
+  }
+}

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SciReader Prototype</title>
+    <link rel="stylesheet" href="./styles.css?v=20260519-7" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">SR</div>
+        <div>
+          <h1>SciReader</h1>
+          <p>Context-preserving scientific reading</p>
+        </div>
+      </div>
+      <form id="paper-form" class="importer">
+        <label for="paper-url">Paper URL</label>
+        <span class="build-stamp" title="Local development build">Build 20260521-1</span>
+        <input
+          id="paper-url"
+          name="paper-url"
+          type="url"
+          placeholder="Paste a Nature, Cell Press, bioRxiv, eLife, or Science paper URL"
+          aria-label="Paper URL"
+        />
+        <button type="submit">Load</button>
+      </form>
+      <div id="account-bar" class="account-bar" aria-label="Account controls"></div>
+    </header>
+
+    <main class="reader-shell">
+      <aside class="outline" aria-label="Article outline">
+        <div class="outline-sticky">
+          <p class="eyebrow">Article</p>
+          <h2 id="outline-title">Loading...</h2>
+          <div id="metadata" class="metadata"></div>
+          <nav id="section-nav" class="section-nav"></nav>
+        </div>
+      </aside>
+
+      <article id="article" class="article" aria-live="polite"></article>
+
+      <aside class="figure-rail" aria-label="Synchronized figures">
+        <div class="figure-tools">
+          <div>
+            <p class="eyebrow">Figure rail</p>
+            <h2 id="active-context">Context</h2>
+          </div>
+          <div class="rail-controls">
+            <label class="sync-toggle">
+              <input id="sync-figures" type="checkbox" checked />
+              <span>Follow text</span>
+            </label>
+            <div class="zoom-control">
+              <label for="figure-zoom">Zoom</label>
+              <input id="figure-zoom" type="range" min="80" max="190" value="100" />
+            </div>
+            <input id="supplement-pdf" type="file" accept="application/pdf,.pdf" hidden />
+            <button id="upload-supplement" class="rail-button" type="button">Upload PDF</button>
+          </div>
+        </div>
+        <div id="active-mentions" class="active-mentions"></div>
+        <div id="figure-list" class="figure-list"></div>
+      </aside>
+    </main>
+
+    <div id="reference-popover" class="reference-popover" hidden></div>
+    <div id="image-viewer" class="image-viewer" hidden>
+      <div class="image-viewer__bar">
+        <div>
+          <p class="eyebrow">Figure viewer</p>
+          <h2 id="image-viewer-title">Figure</h2>
+        </div>
+        <button id="image-viewer-close" type="button">Close</button>
+      </div>
+      <div class="image-viewer__stage">
+        <img id="image-viewer-img" alt="" />
+      </div>
+    </div>
+
+    <div id="ai-selection-toolbar" class="ai-selection-toolbar" hidden>
+      <button id="ai-selection-ask" type="button">Ask AI</button>
+    </div>
+
+    <aside id="library-panel" class="library-panel side-panel" aria-label="Saved papers" hidden>
+      <div class="side-panel__header">
+        <div>
+          <p class="eyebrow">Library</p>
+          <h2>Saved papers</h2>
+        </div>
+        <button id="library-close" type="button">Close</button>
+      </div>
+      <div id="library-list" class="library-list"></div>
+    </aside>
+
+    <aside id="notes-panel" class="notes-panel side-panel" aria-label="Paper notes" hidden>
+      <div class="side-panel__header">
+        <div>
+          <p class="eyebrow">Notes</p>
+          <h2 id="notes-title">Paper notes</h2>
+        </div>
+        <button id="notes-close" type="button">Close</button>
+      </div>
+      <textarea id="note-text" rows="5" placeholder="Write a note about this paper..."></textarea>
+      <div class="note-actions">
+        <button id="save-note" type="button">Save note</button>
+      </div>
+      <div id="notes-list" class="notes-list"></div>
+    </aside>
+
+    <aside id="ai-panel" class="ai-panel" aria-label="AI reading assistant" hidden>
+      <div class="ai-panel__header">
+        <div>
+          <p class="eyebrow">AI assistant</p>
+          <h2 id="ai-context-title">Selected context</h2>
+        </div>
+        <button id="ai-close" type="button">Close</button>
+      </div>
+      <div id="ai-context-preview" class="ai-context-preview" hidden></div>
+      <img id="ai-region-preview" class="ai-region-preview" alt="Selected figure region" hidden />
+      <div class="ai-prompt-chips" aria-label="Common prompts">
+        <button type="button" data-ai-prompt="Explain the method here. What did the authors do, why did they do it, and what should I watch out for technically?">Explain method</button>
+        <button type="button" data-ai-prompt="Interpret the finding here. What is the result, what does it imply, and how strong is the evidence from this context?">Interpret finding</button>
+        <button type="button" data-ai-prompt="Explain this figure panel or selected region. Walk me through what each visual element means and what conclusion it supports.">Explain figure</button>
+        <button type="button" data-ai-prompt="What are the caveats or alternative interpretations here? Focus on limitations visible from this context.">Find caveats</button>
+      </div>
+      <label class="ai-scope">
+        <span>Scope</span>
+        <select id="ai-scope">
+          <option value="selection">Selection only</option>
+          <option value="section">Current section / figure mentions</option>
+          <option value="paper">Whole paper text</option>
+        </select>
+      </label>
+      <label class="ai-question">
+        <span>Question</span>
+        <textarea id="ai-question" rows="3" placeholder="Ask about this selection..."></textarea>
+      </label>
+      <div class="ai-actions">
+        <button id="ai-ask" type="button">Ask local AI</button>
+        <button id="ai-copy" type="button">Copy prompt</button>
+        <button id="ai-save" type="button">Save answer</button>
+      </div>
+      <section class="ai-answer-wrap">
+        <div class="ai-answer-title">
+          <span>Answer</span>
+          <span id="ai-answer-status">Ready</span>
+        </div>
+        <div id="ai-answer" class="ai-answer" aria-live="polite"></div>
+      </section>
+    </aside>
+
+    <script src="./article-data.js?v=20260519-7"></script>
+    <script src="./app.js?v=20260519-7"></script>
+  </body>
+</html>
