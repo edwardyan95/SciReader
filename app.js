@@ -465,6 +465,7 @@ const state = {
   activeSelectionQueued: false,
   panByFigure: {},
   failedImages: new Set(),
+  openLegendFigures: new Set(),
   zoom: 1,
   aiContext: null,
   aiRegionModeFigureId: null,
@@ -919,6 +920,7 @@ function resetReaderState() {
   state.activeSelectionQueued = false;
   state.panByFigure = {};
   state.failedImages = new Set();
+  state.openLegendFigures = new Set();
   state.zoom = 1;
   state.aiContext = null;
   state.aiRegionModeFigureId = null;
@@ -953,6 +955,138 @@ function loadArticle(nextArticle, { updateUrl = true } = {}) {
   }, 0);
 }
 
+function figureCaptionBody(figure) {
+  const caption = String(figure.caption || "").replace(/\s+/g, " ").trim();
+  if (!caption) return "";
+  const title = String(figure.title || "").replace(/\s+/g, " ").trim();
+  const labels = [
+    figure.label,
+    figure.label.replace(/^Fig\./i, "Figure"),
+    figure.label.replace(/^Figure/i, "Fig."),
+  ]
+    .map((label) => String(label || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  for (const label of labels) {
+    let pattern = new RegExp(`^${escapeRegExp(label)}\\s*[:.]?\\s*`, "i");
+    let next = caption.replace(pattern, "").trim();
+    if (title && next !== caption) {
+      next = next.replace(new RegExp(`^${escapeRegExp(title)}\\s*[:.]?\\s*`, "i"), "").trim();
+    }
+    if (next !== caption && next) return next;
+  }
+  if (title) {
+    const next = caption.replace(new RegExp(`^${escapeRegExp(title)}\\s*[:.]?\\s*`, "i"), "").trim();
+    if (next && next !== caption) return next;
+  }
+  return caption;
+}
+
+function normalizeLegendPanelKey(label) {
+  return String(label || "")
+    .replace(/\s+and\s+/gi, "+")
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/\s+/g, "");
+}
+
+function legendSegments(figure) {
+  const body = figureCaptionBody(figure);
+  const panelLabel = "[A-Z](?:\\s*(?:,|and|&|\\+|\\/|[\\u2010-\\u2015-])\\s*[A-Z])*";
+  const pattern = new RegExp(`(^|[.;:]\\s+)(?:\\((${panelLabel})\\)|(${panelLabel})\\))`, "g");
+  const matches = [...body.matchAll(pattern)].map((match) => {
+    const label = match[2] || match[3] || "";
+    const labelStart = match.index + match[1].length;
+    const labelText = body.slice(labelStart, labelStart + match[0].length - match[1].length);
+    return {
+      index: labelStart,
+      end: labelStart + labelText.length,
+      label: labelText,
+      key: normalizeLegendPanelKey(label),
+    };
+  });
+  if (!matches.length) return { intro: "", segments: [], body };
+
+  const seenKeys = new Set();
+  const panelMatches = matches
+    .filter((item) => {
+      if (seenKeys.has(item.key)) return false;
+      seenKeys.add(item.key);
+      return true;
+    });
+  const intro = body.slice(0, panelMatches[0].index).trim();
+  const segments = panelMatches.map((item, index) => {
+    const start = item.end;
+    const end = index + 1 < panelMatches.length ? panelMatches[index + 1].index : body.length;
+    return {
+      key: item.key,
+      label: item.label,
+      text: body.slice(start, end).trim(),
+    };
+  });
+  return { intro, segments, body };
+}
+
+function renderLegendChips(figure, segments) {
+  if (!segments.length) return "";
+  const buttons = segments
+    .slice(0, 14)
+    .map(
+      (segment) =>
+        `<button type="button" class="legend-chip" data-legend-panel="${escapeHtml(segment.key)}" data-legend-figure="${figure.id}" title="Show ${escapeHtml(segment.label)} legend">${escapeHtml(segment.key)}</button>`,
+    )
+    .join("");
+  return `<div class="legend-chip-list" aria-label="${escapeHtml(figure.label)} legend panels">${buttons}</div>`;
+}
+
+function renderLegendDrawerContent(figure, details) {
+  if (details.segments.length) {
+    const intro = details.intro ? `<p class="legend-intro">${escapeHtml(details.intro)}</p>` : "";
+    const segments = details.segments
+      .map(
+        (segment) => `
+          <div class="legend-segment" data-legend-segment="${escapeHtml(segment.key)}">
+            <span class="legend-segment-label">${escapeHtml(segment.label)}</span>
+            <p>${escapeHtml(segment.text)}</p>
+          </div>
+        `,
+      )
+      .join("");
+    return `${intro}${segments}`;
+  }
+  return `<p class="legend-intro">${escapeHtml(details.body || figure.caption || "No legend available.")}</p>`;
+}
+
+function renderLegendBlock(figure) {
+  const details = legendSegments(figure);
+  const body = details.body || figure.caption || "";
+  const preview = truncateText(body, 260);
+  const isOpen = state.openLegendFigures.has(figure.id);
+  return `
+    <div class="legend-shell">
+      <div class="legend-preview">
+        <p class="caption caption-preview">${escapeHtml(preview || "No legend available.")}</p>
+        <div class="legend-controls">
+          ${renderLegendChips(figure, details.segments)}
+          <button
+            type="button"
+            class="legend-toggle"
+            data-toggle-legend="${figure.id}"
+            aria-expanded="${isOpen ? "true" : "false"}"
+            aria-controls="legend-drawer-${figure.id}"
+          >${isOpen ? "Hide legend" : "Legend"}</button>
+        </div>
+      </div>
+      <div id="legend-drawer-${figure.id}" class="legend-drawer" ${isOpen ? "" : "hidden"}>
+        <div class="legend-drawer__head">
+          <span>Full legend</span>
+          <button type="button" class="legend-close" data-toggle-legend="${figure.id}" aria-expanded="${isOpen ? "true" : "false"}">Close</button>
+        </div>
+        ${renderLegendDrawerContent(figure, details)}
+      </div>
+    </div>
+  `;
+}
+
 function renderFigures() {
   elements.figureList.innerHTML = article.figures
     .map((figure) => {
@@ -972,7 +1106,7 @@ function renderFigures() {
           </header>
           ${renderFigureMentionNav(figure)}
           <div class="figure-stage">${image}</div>
-          <p class="caption">${escapeHtml(figure.caption)}</p>
+          ${renderLegendBlock(figure)}
           ${renderFigureActions(figure)}
         </section>
       `;
@@ -981,6 +1115,33 @@ function renderFigures() {
 
   document.querySelectorAll(".figure-stage img").forEach(attachFigureImageHandlers);
   updateFigureCards();
+}
+
+function setLegendOpen(figureId, open, focusPanel = "") {
+  const card = document.querySelector(`[data-figure-card="${figureId}"]`);
+  if (!card) return;
+  if (open) state.openLegendFigures.add(figureId);
+  else state.openLegendFigures.delete(figureId);
+  card.classList.toggle("is-legend-open", open);
+  const drawer = card.querySelector(".legend-drawer");
+  if (drawer) drawer.hidden = !open;
+  card.querySelectorAll(`[data-toggle-legend="${figureId}"]`).forEach((button) => {
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    if (button.classList.contains("legend-close")) return;
+    button.textContent = open ? "Hide legend" : "Legend";
+  });
+  if (!open || !focusPanel) return;
+  window.setTimeout(() => {
+    const segment = [...card.querySelectorAll("[data-legend-segment]")].find(
+      (item) => item.dataset.legendSegment === focusPanel,
+    );
+    if (!segment) return;
+    card.querySelectorAll(".legend-segment.is-focused").forEach((item) => {
+      item.classList.remove("is-focused");
+    });
+    segment.classList.add("is-focused");
+    segment.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, 0);
 }
 
 function renderFigureMentionNav(figure) {
@@ -2261,6 +2422,8 @@ function setupEvents() {
     const jumpButton = event.target.closest("[data-jump-figure]");
     const openImageButton = event.target.closest("[data-open-image]");
     const retryImageButton = event.target.closest("[data-retry-image]");
+    const legendToggleButton = event.target.closest("[data-toggle-legend]");
+    const legendPanelButton = event.target.closest("[data-legend-panel]");
     const mentionTargetButton = event.target.closest("[data-mention-target]");
     const askRegionButton = event.target.closest("[data-ask-region]");
     const createAccountButton = event.target.closest("[data-create-account]");
@@ -2302,6 +2465,19 @@ function setupEvents() {
 
     if (retryImageButton) {
       retryFigureImage(retryImageButton.dataset.retryImage);
+    }
+
+    if (legendToggleButton) {
+      const id = legendToggleButton.dataset.toggleLegend;
+      setLegendOpen(id, !state.openLegendFigures.has(id));
+    }
+
+    if (legendPanelButton) {
+      setLegendOpen(
+        legendPanelButton.dataset.legendFigure,
+        true,
+        legendPanelButton.dataset.legendPanel,
+      );
     }
 
     if (mentionTargetButton) {

@@ -16,7 +16,7 @@ import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from nature_parser import (
+from scireader_import import (
     ARTICLE_URL_RE,
     CELL_URL_RE,
     SCIENCE_URL_RE,

@@ -874,19 +874,169 @@ body.is-start .article {
   color: #064e4d;
 }
 
+.legend-shell {
+  border-top: 1px solid var(--line);
+  background: white;
+}
+
+.legend-preview {
+  display: grid;
+  gap: 5px;
+  padding: 5px 8px 6px;
+}
+
 .caption {
-  max-height: 86px;
-  overflow: auto;
-  padding: 7px 9px 8px;
+  margin: 0;
   color: #37413e;
   font-size: 0.76rem;
   line-height: 1.38;
 }
 
-.caption mark {
+.caption-preview {
+  display: block;
+  max-height: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption mark,
+.legend-drawer mark {
   border-radius: 4px;
   background: #fff1cf;
   color: inherit;
+}
+
+.legend-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.legend-chip-list {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: thin;
+}
+
+.legend-chip,
+.legend-toggle,
+.legend-close {
+  min-height: 23px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #f7faf7;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.legend-chip {
+  min-width: 25px;
+  padding-inline: 6px;
+}
+
+.legend-chip:hover,
+.legend-toggle:hover,
+.legend-close:hover {
+  border-color: var(--teal);
+  color: #064e4d;
+}
+
+.legend-toggle {
+  flex: 0 0 auto;
+  background: var(--teal-soft);
+  color: #064e4d;
+}
+
+.legend-drawer {
+  max-height: min(42vh, 360px);
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  background: #fbfcfa;
+}
+
+.legend-drawer[hidden] {
+  display: none;
+}
+
+.legend-drawer__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(251, 252, 250, 0.96);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.legend-close {
+  min-height: 22px;
+  padding: 2px 8px;
+  background: white;
+  text-transform: none;
+}
+
+.legend-intro {
+  margin: 0;
+  padding: 9px;
+  color: #37413e;
+  font-size: 0.78rem;
+  line-height: 1.46;
+}
+
+.legend-segment {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 7px;
+  padding: 8px 9px;
+  border-top: 1px solid rgba(23, 32, 38, 0.08);
+  color: #37413e;
+  scroll-margin-top: 40px;
+}
+
+.legend-intro + .legend-segment {
+  border-top: 1px solid var(--line);
+}
+
+.legend-segment-label {
+  align-self: start;
+  justify-self: start;
+  min-width: 30px;
+  border-radius: 999px;
+  padding: 3px 5px;
+  background: var(--teal-soft);
+  color: #064e4d;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.legend-segment p {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.46;
+}
+
+.legend-segment.is-focused {
+  background: #fff8df;
+  box-shadow: inset 3px 0 0 var(--gold);
 }
 
 .figure-actions {
@@ -894,6 +1044,7 @@ body.is-start .article {
   flex-wrap: wrap;
   gap: 5px;
   padding: 0 9px 8px;
+  margin-top: 1px;
 }
 
 .figure-actions button,
